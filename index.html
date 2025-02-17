@@ -1,243 +1,123 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文天玩中级CTF训练平台</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            background: #f5f6fa;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            margin: 0;
             padding: 20px;
+            background-color: #f4f4f4;
         }
-
-        header {
-            background: var(--primary-color);
-            color: white;
-            padding: 1rem;
+        h1 {
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-
-        .nav {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin: 20px 0;
-        }
-
-        .nav-button {
-            padding: 10px 20px;
-            background: #ecf0f1;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .nav-button.active {
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .challenge-list {
-            display: grid;
-            gap: 20px;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        }
-
-        .challenge-card {
+        .container {
+            max-width: 800px;
+            margin: auto;
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
-        .challenge-card.solved {
-            border-left: 5px solid #2ecc71;
+        .problem {
+            margin-bottom: 20px;
         }
-
-        .difficulty {
-            font-size: 0.8em;
-            padding: 3px 8px;
-            border-radius: 3px;
-            display: inline-block;
+        .problem input {
+            padding: 10px;
+            width: calc(100% - 22px);
+            margin-top: 10px;
         }
-
-        .easy { background: #2ecc71; color: white; }
-        .medium { background: #f1c40f; color: black; }
-        .hard { background: #e74c3c; color: white; }
-
-        .flag-input {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        button {
-            padding: 8px 16px;
-            background: var(--secondary-color);
+        .submit-btn {
+            padding: 10px 15px;
+            background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
+            border-radius: 5px;
+        }
+        .result {
+            margin-top: 10px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>文天玩中级CTF训练平台</h1>
-    </header>
-
     <div class="container">
-        <div class="nav" id="nav"></div>
-        <div class="challenge-list" id="challenges"></div>
+        <h1>文天玩中级CTF训练平台</h1>
+        <div id="problems"></div>
     </div>
 
     <script>
-        // 题目数据
-        const challenges = [
+        const problems = [
             {
-                category: 'Web',
-                title: '简单的注入',
-                description: '找到隐藏的flag',
-                difficulty: 'easy',
-                score: 100,
-                flagHash: '7f9d0d08bf493f7e0e50a3f90b4f1b8e3e4b5b55da10da45d669f4b7c787b8b6' // md5(flag1) 的SHA256
+                id: 1,
+                title: "题目1：Base64解码",
+                description: "请将以下Base64编码解码出原始内容：SGVsbG8gV29ybGQh",
+                answer: "Hello World!",
             },
             {
-                category: 'Crypto',
-                title: '凯撒密码',
-                description: '破译古典密码',
-                difficulty: 'medium',
-                score: 200,
-                flagHash: '1b4f0e9851971998e732078544c96b36c3d01cedf7ca623332f0c5d9ae7e2dc9' // sha256(flag2)
+                id: 2,
+                title: "题目2：SHA256哈希",
+                description: "请计算'文天玩CTF'的SHA256哈希值。",
+                answer: "9657e8f1e1da574fe1031e86f48d36021ca39e7c9eb5839747b8da6cd8c4f1d4",
             },
             {
-                category: 'Misc',
-                title: '图片隐写',
-                description: '图片中隐藏的秘密',
-                difficulty: 'hard',
-                score: 300,
-                flagHash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' // sha256(test123)
+                id: 3,
+                title: "题目3：简单的Python脚本",
+                description: "请阅读下面的Python代码并告诉我输出结果是什么？\n```python\nprint('文天玩')\n```",
+                answer: "文天玩",
             }
         ];
 
-        // 初始化
-        function init() {
-            renderNav();
-            renderChallenges();
-            loadProgress();
-        }
+        function displayProblems() {
+            const problemsDiv = document.getElementById("problems");
+            problems.forEach(problem => {
+                const problemDiv = document.createElement("div");
+                problemDiv.classList.add("problem");
 
-        // 渲染导航
-        function renderNav() {
-            const categories = [...new Set(challenges.map(c => c.category))];
-            const nav = document.getElementById('nav');
-            nav.innerHTML = categories.map(cat => `
-                <button class="nav-button" onclick="filterCategory('${cat}')">${cat}</button>
-            `).join('');
-        }
+                const titleEl = document.createElement("h2");
+                titleEl.innerText = problem.title;
+                problemDiv.appendChild(titleEl);
 
-        // 过滤题目
-        function filterCategory(category) {
-            document.querySelectorAll('.nav-button').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent === category);
+                const descEl = document.createElement("p");
+                descEl.innerText = problem.description;
+                problemDiv.appendChild(descEl);
+
+                const inputEl = document.createElement("input");
+                inputEl.type = "text";
+                inputEl.placeholder = "请输入答案";
+                problemDiv.appendChild(inputEl);
+
+                const submitBtn = document.createElement("button");
+                submitBtn.innerText = "提交";
+                submitBtn.className = "submit-btn";
+                submitBtn.onclick = () => checkAnswer(problem, inputEl.value);
+
+                problemDiv.appendChild(submitBtn);
+
+                const resultDiv = document.createElement("div");
+                resultDiv.className = "result";
+                problemDiv.appendChild(resultDiv);
+
+                problemsDiv.appendChild(problemDiv);
             });
-            renderChallenges(category);
         }
 
-        // 渲染题目列表
-        function renderChallenges(category = 'Web') {
-            const filtered = challenges.filter(c => c.category === category);
-            const container = document.getElementById('challenges');
-            container.innerHTML = filtered.map(challenge => `
-                <div class="challenge-card ${isSolved(challenge) ? 'solved' : ''}">
-                    <h3>${challenge.title}</h3>
-                    <p>${challenge.description}</p>
-                    <div class="difficulty ${challenge.difficulty}">${
-                        challenge.difficulty.toUpperCase()
-                    }</div>
-                    <div class="score">积分: ${challenge.score}</div>
-                    ${!isSolved(challenge) ? `
-                    <div class="flag-input">
-                        <input type="text" placeholder="输入flag" id="input-${challenge.title}">
-                        <button onclick="submitFlag('${challenge.title}')">提交</button>
-                    </div>
-                    ` : '<div style="color:green;margin-top:10px;">✓ 已完成</div>'}
-                </div>
-            `).join('');
-        }
-
-        // 提交flag
-        function submitFlag(title) {
-            const challenge = challenges.find(c => c.title === title);
-            const input = document.getElementById(`input-${title}`);
-            const flag = input.value.trim();
-            
-            if (!flag) return alert('请输入flag');
-            
-            // 计算SHA256哈希
-            const hash = CryptoJS.SHA256(flag).toString();
-            
-            if (hash === challenge.flagHash) {
-                saveProgress(title);
-                renderChallenges();
-                alert('恭喜！flag正确！');
+        function checkAnswer(problem, userAnswer) {
+            const resultDiv = document.querySelector(`.problem:nth-child(${problem.id}) .result`);
+            if (userAnswer.trim() === problem.answer) {
+                resultDiv.innerText = "正确！🎉";
+                resultDiv.style.color = "green";
             } else {
-                alert('flag错误，请再试一次');
+                resultDiv.innerText = "错误，请再试一次。";
+                resultDiv.style.color = "red";
             }
         }
 
-        // 保存进度到localStorage
-        function saveProgress(title) {
-            const solved = JSON.parse(localStorage.getItem('solved') || []);
-            if (!solved.includes(title)) {
-                solved.push(title);
-                localStorage.setItem('solved', JSON.stringify(solved));
-            }
-        }
-
-        // 加载进度
-        function loadProgress() {
-            if (!localStorage.getItem('solved')) {
-                localStorage.setItem('solved', JSON.stringify([]));
-            }
-        }
-
-        // 检查是否已完成
-        function isSolved(challenge) {
-            const solved = JSON.parse(localStorage.getItem('solved'));
-            return solved.includes(challenge.title);
-        }
-
-        // 初始化
-        init();
+        displayProblems();
     </script>
 </body>
 </html>
