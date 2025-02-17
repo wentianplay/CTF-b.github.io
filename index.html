@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文天玩中级CTF训练平台</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            background: #f5f6fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .nav-button {
+            padding: 10px 20px;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .nav-button.active {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .challenge-list {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        .challenge-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .challenge-card.solved {
+            border-left: 5px solid #2ecc71;
+        }
+
+        .difficulty {
+            font-size: 0.8em;
+            padding: 3px 8px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .easy { background: #2ecc71; color: white; }
+        .medium { background: #f1c40f; color: black; }
+        .hard { background: #e74c3c; color: white; }
+
+        .flag-input {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>文天玩中级CTF训练平台</h1>
+    </header>
+
+    <div class="container">
+        <div class="nav" id="nav"></div>
+        <div class="challenge-list" id="challenges"></div>
+    </div>
+
+    <script>
+        // 题目数据
+        const challenges = [
+            {
+                category: 'Web',
+                title: '简单的注入',
+                description: '找到隐藏的flag',
+                difficulty: 'easy',
+                score: 100,
+                flagHash: '7f9d0d08bf493f7e0e50a3f90b4f1b8e3e4b5b55da10da45d669f4b7c787b8b6' // md5(flag1) 的SHA256
+            },
+            {
+                category: 'Crypto',
+                title: '凯撒密码',
+                description: '破译古典密码',
+                difficulty: 'medium',
+                score: 200,
+                flagHash: '1b4f0e9851971998e732078544c96b36c3d01cedf7ca623332f0c5d9ae7e2dc9' // sha256(flag2)
+            },
+            {
+                category: 'Misc',
+                title: '图片隐写',
+                description: '图片中隐藏的秘密',
+                difficulty: 'hard',
+                score: 300,
+                flagHash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08' // sha256(test123)
+            }
+        ];
+
+        // 初始化
+        function init() {
+            renderNav();
+            renderChallenges();
+            loadProgress();
+        }
+
+        // 渲染导航
+        function renderNav() {
+            const categories = [...new Set(challenges.map(c => c.category))];
+            const nav = document.getElementById('nav');
+            nav.innerHTML = categories.map(cat => `
+                <button class="nav-button" onclick="filterCategory('${cat}')">${cat}</button>
+            `).join('');
+        }
+
+        // 过滤题目
+        function filterCategory(category) {
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === category);
+            });
+            renderChallenges(category);
+        }
+
+        // 渲染题目列表
+        function renderChallenges(category = 'Web') {
+            const filtered = challenges.filter(c => c.category === category);
+            const container = document.getElementById('challenges');
+            container.innerHTML = filtered.map(challenge => `
+                <div class="challenge-card ${isSolved(challenge) ? 'solved' : ''}">
+                    <h3>${challenge.title}</h3>
+                    <p>${challenge.description}</p>
+                    <div class="difficulty ${challenge.difficulty}">${
+                        challenge.difficulty.toUpperCase()
+                    }</div>
+                    <div class="score">积分: ${challenge.score}</div>
+                    ${!isSolved(challenge) ? `
+                    <div class="flag-input">
+                        <input type="text" placeholder="输入flag" id="input-${challenge.title}">
+                        <button onclick="submitFlag('${challenge.title}')">提交</button>
+                    </div>
+                    ` : '<div style="color:green;margin-top:10px;">✓ 已完成</div>'}
+                </div>
+            `).join('');
+        }
+
+        // 提交flag
+        function submitFlag(title) {
+            const challenge = challenges.find(c => c.title === title);
+            const input = document.getElementById(`input-${title}`);
+            const flag = input.value.trim();
+            
+            if (!flag) return alert('请输入flag');
+            
+            // 计算SHA256哈希
+            const hash = CryptoJS.SHA256(flag).toString();
+            
+            if (hash === challenge.flagHash) {
+                saveProgress(title);
+                renderChallenges();
+                alert('恭喜！flag正确！');
+            } else {
+                alert('flag错误，请再试一次');
+            }
+        }
+
+        // 保存进度到localStorage
+        function saveProgress(title) {
+            const solved = JSON.parse(localStorage.getItem('solved') || []);
+            if (!solved.includes(title)) {
+                solved.push(title);
+                localStorage.setItem('solved', JSON.stringify(solved));
+            }
+        }
+
+        // 加载进度
+        function loadProgress() {
+            if (!localStorage.getItem('solved')) {
+                localStorage.setItem('solved', JSON.stringify([]));
+            }
+        }
+
+        // 检查是否已完成
+        function isSolved(challenge) {
+            const solved = JSON.parse(localStorage.getItem('solved'));
+            return solved.includes(challenge.title);
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
